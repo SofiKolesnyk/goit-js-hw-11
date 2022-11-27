@@ -1,3 +1,4 @@
+import { getGallery } from './js/images'
 import SimpleLightbox from 'simplelightbox'; 
 import 'simplelightbox/dist/simple-lightbox.min.css'; 
 const _ = require('lodash'); 
@@ -9,18 +10,8 @@ Notiflix.Notify.init({
   fontSize: '16px', 
 }); 
 import 'notiflix/dist/notiflix-3.2.5.min.css'; 
- 
-const PIXABAY_KEY = '31555208-97df9fea643c1216f40ca43bb'; 
-const IMAGE_TYPE = 'photo'; 
-const ORIENTATION = 'horizontal'; 
-const SAFESEARCH = true; 
-const API = 'https://pixabay.com/api/'; 
-const PER_PAGE = 40; 
-const GAP = 16; 
-const HEIGHT_FORM = 36; 
-const UP_TO_GALLERY = HEIGHT_FORM + GAP; 
- 
-let currentPage = 1; 
+
+export let currentPage = 1; 
 let pagesCount = 1; 
 let searchEnded = false; 
 let firstAsk = false;
@@ -31,10 +22,20 @@ const lightbox = new SimpleLightbox('.gallery__item', {
   captionDelay: 100, 
 }); 
 const formRef = document.querySelector('#search-form'); 
-const { 
+export const { 
   elements: { searchQuery }, 
 } = formRef; 
  
+// const PIXABAY_KEY = '31555208-97df9fea643c1216f40ca43bb'; 
+// const IMAGE_TYPE = 'photo'; 
+// const ORIENTATION = 'horizontal'; 
+// const SAFESEARCH = true; 
+// const API = 'https://pixabay.com/api/'; 
+const PER_PAGE = 40; 
+// const GAP = 16; 
+// const HEIGHT_FORM = 36; 
+// const UP_TO_GALLERY = HEIGHT_FORM + GAP; 
+
 searchQuery.style.padding = '10px'; 
 searchQuery.style.fontSize = '15px'; 
 searchQuery.style.height = '40px'; 
@@ -68,36 +69,32 @@ function chackBottom(pxToBottom) {
   const toBottom = document.documentElement.clientHeight + pxToBottom; 
   const toBottomOfDoc = document.documentElement.getBoundingClientRect().bottom; 
  
-  if (toBottomOfDoc < toBottom && !searchEnded) { 
-    return true; 
-  } 
+  return toBottomOfDoc < toBottom && !searchEnded;
+  }
  
-  return false; 
-} 
+// async function getGallery() { 
+//   try { 
+//     const searchParams = new URLSearchParams({ 
+//       key: PIXABAY_KEY, 
+//       q: searchQuery.value.split(' ').join('+'), 
+//       image_type: IMAGE_TYPE, 
+//       orientation: ORIENTATION, 
+//       safesearch: SAFESEARCH, 
+//       page: currentPage, 
+//       per_page: PER_PAGE, 
+//     }); 
  
-async function getGallery() { 
-  try { 
-    const searchParams = new URLSearchParams({ 
-      key: PIXABAY_KEY, 
-      q: searchQuery.value.split(' ').join('+'), 
-      image_type: IMAGE_TYPE, 
-      orientation: ORIENTATION, 
-      safesearch: SAFESEARCH, 
-      page: currentPage, 
-      per_page: PER_PAGE, 
-    }); 
+//     const response = await axios.get(`${API}?${searchParams}`); 
  
-    const response = await axios.get(`${API}?${searchParams}`); 
+//     if (response.status !== 200) { 
+//       throw new Error(response.status); 
+//     } 
  
-    if (response.status !== 200) { 
-      throw new Error(response.status); 
-    } 
- 
-    return response.data; 
-  } catch (error) { 
-    Notiflix.Notify.failure(error.message); 
-  } 
-} 
+//     return response.data; 
+//   } catch (error) { 
+//     Notiflix.Notify.failure(error.message); 
+//   } 
+// } 
  
 function normalizedQuery(symbol) { 
   searchQuery.value = searchQuery.value.trim().toLowerCase(); 
@@ -195,4 +192,23 @@ window.addEventListener('load', () => {
     } 
   } 
 }); 
- 
+
+document.addEventListener(
+  'scroll',
+  _.debounce(event => {
+    if (!chackBottom(100)) return;
+
+    if (pagesCount !== currentPage) {
+      firstAsk = false;
+      currentPage += 1;
+
+      getGallery().then(response => {
+        renderImages(response.hits);
+      });
+      return;
+    }
+
+    Notiflix.Notify.info("We're sorry, but you've reached the end of search results.");
+    searchEnded = true;
+  }, 500)
+);
